@@ -1,0 +1,31 @@
+[project]
+name = "framesandbox"
+version = "0.1.0"
+description = "Live-fire replay sandbox on top of framebt: accelerated historical time, point-in-time data gateway, fake-signal deception training for live strategy projects."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+keywords = [
+    "quantitative-finance", "backtesting", "sandbox", "paper-trading",
+    "point-in-time", "look-ahead-bias", "replay", "a-share", "fake-signal",
+]
+authors = [{ name = "LisonEvf", email = "lisonevf@gmail.com" }]
+
+# 核心（时钟/网关/经纪/检测器）纯标准库；读真实数仓需要 pandas + pyarrow。
+dependencies = []
+
+[project.optional-dependencies]
+data = ["pandas", "pyarrow"]
+all = ["pandas", "pyarrow", "pytest"]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
