@@ -30,7 +30,7 @@ framesandbox 把历史按分钟加速回放，策略用和实盘一样的反应�
 ```bash
 cd framesandbox
 pip install -e ".[all]"        # 或直接把 src 加入 PYTHONPATH（framebt 自动引导）
-python -m pytest               # 41 项测试：前视攻击/时钟写保护/T+1/QFQ对齐/口径对账/确定性/端到端
+python -m pytest               # 54 项测试：前视攻击/时钟写保护/T+1/QFQ对齐/口径对账/确定性/端到端/evf桥接/双臂对账
 ```
 
 ### 30 秒：内存数据跑通（无需数仓）
@@ -98,6 +98,19 @@ python examples/run_live_now_snapshot.py --date 2025-04-07
 `load_panel / regime_now / current_signal` —— 数据入口已被劫持到 PIT 网关，
 项目代码以为自己在「实时」，其实活在历史里。适合单点快照型实盘脚本。
 
+### 示例 5：evf-trade-agent 桥接 · 一次开发，验证后实盘
+
+```bash
+python examples/run_evf_agent.py --start 2024-01-01 --end 2024-06-28
+python examples/run_evf_agent.py --start 2026-09-29 --end 2026-10-19 --resolution 1m
+# 或在 evf-trade-agent 侧：python verify_sandbox.py --start 2024-01-01 --end 2024-06-28
+```
+
+trade-agent 的注册策略 + Executor 执行层**原样**进沙盒：行情走 PIT Shim、
+成交走 PaperBroker，策略代码与 config 两边共用同一份，零改动。1m 模式在
+虚拟 14:50 用 forming 价决策（与实盘同构），每分钟独立止损。联动架构与
+验收门见 [`docs/INTEGRATION_TRADE_AGENT.md`](docs/INTEGRATION_TRADE_AGENT.md)。
+
 ## 核心机制
 
 | 模块 | 能力 |
@@ -145,6 +158,8 @@ summary.json     # 机器可读汇总 + 配置 + 审计
 | poslayer 日线回放 | 2024 全年 242 交易日 × 5576 标的 | ~40s |
 | poslayer 日线回放 | 2024-01 → 2026-10（~680 日） | ~2min |
 | 日内 1m 回放 | 10 日 × 60 标的 × 240 分钟 | ~160s/策略 |
+| evf fusion 日线回放（桥接） | 2024-01 → 2024-02（37 日，P2 优化后） | ~27s |
+| evf fusion 1m 回放（桥接） | 2 日 × 200 标的 × 240 分钟 | ~71s |
 
 长历史日线回放用 `resolution="daily"`；分钟级训练用 `1m` + focus 池。
 `--speed 86400 --pace` 可把节奏放慢到「1 真实秒 = 1 虚拟日」供人眼观察。
@@ -164,6 +179,12 @@ summary.json     # 机器可读汇总 + 配置 + 审计
 ## 文档
 
 - [`docs/DESIGN.md`](docs/DESIGN.md)：架构、时间模型、G1–G6、确定性、与 framebt 的关系。
+- [`docs/STRATEGY_CONTRACT.md`](docs/STRATEGY_CONTRACT.md)：实盘策略进沙盒的约束与规范
+  （时间/数据/网络/交易规则、回调时序、确定性义务、接入检查清单）。
+- [`docs/INTEGRATION_TRADE_AGENT.md`](docs/INTEGRATION_TRADE_AGENT.md)：与 evf-trade-agent
+  联动分析（一次开发 → 沙盒验证 → 直接实盘的桥接架构与风险清单）。
+- [`docs/PIPELINE.md`](docs/PIPELINE.md)：全流程 Mermaid 图 + 三个完整案例实录
+  （daily 长历史 / 1m 欺骗训练 / 新策略全链路）。
 - framebt 本体：[`../framebt/README.md`](../framebt/README.md)、
   [`../framebt/USER_GUIDE.md`](../framebt/USER_GUIDE.md)。
 

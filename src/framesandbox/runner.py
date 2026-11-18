@@ -311,6 +311,12 @@ class SandboxRunner:
             if st is not None:
                 st.open = st.high = st.low = st.last = bar.open
                 st.minute_idx = 0
+                # 开盘分钟（09:30）的量/额计入累计：分钟循环从 i=1 起，
+                # 这里不记则盘中 volume/amount/vwap 永远漏掉第一根（收盘才覆盖）
+                path = self._materialized.get(sym)
+                if path is not None:
+                    st.volume = path.vols[0]
+                    st.amount = path.prices[0] * path.vols[0]
             up, dn = limit_prices(sym, pc_map.get(sym, 0.0) or bar.close)
             ev = MarketEvent(symbol=sym, day_ord=day.ord, session="open",
                              minute_of_day=OPEN_MINUTE, price=bar.open,

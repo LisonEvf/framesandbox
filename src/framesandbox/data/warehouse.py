@@ -125,6 +125,7 @@ class SandboxData:
         self._day_cache: OrderedDict[int, dict] = OrderedDict()
         self._intraday_cache: OrderedDict[int, object] = OrderedDict()
         self._intraday_avail: dict[int, bool] = {}
+        self._sym_positions: dict | None = None   # 懒构建：symbol → 行位置索引
         self.calendar = TradingCalendar(self._dates.tolist())
 
     # ------------------------------------------------------------------ 基本元信息
@@ -202,7 +203,13 @@ class SandboxData:
         if hit is not None:
             self._sym_cache.move_to_end(symbol)
             return hit
-        sub = self._panel[self._panel["symbol"] == symbol]
+        if self._sym_positions is None:
+            # 一次性位置索引：避免每个首访标的都对全量面板做 Arrow 字符串
+            # 全表扫描（15M 行 × 数百标的曾是桥接回放的主要开销）。
+            # 懒构建：不调用 symbol_series 的回放路径（如 poslayer）零开销。
+            self._sym_positions = self._panel.groupby("symbol", sort=False).indices
+        pos = self._sym_positions.get(symbol)
+        sub = self._panel.iloc[pos] if pos is not None else self._panel.iloc[0:0]
         out = {
             "date": sub["date"].to_numpy(dtype=np.int64),
             "open": sub["open"].to_numpy(dtype=float),
